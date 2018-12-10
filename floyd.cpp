@@ -1,7 +1,6 @@
 
 // C Program for Floyd Warshall Algorithm 
-#include <stdio.h>
-#include <stdlib.h> 
+#include <stdio.h> 
 #include "mpi.h"   
 // Number of vertices in the graph 
 #define V 4 
@@ -43,7 +42,8 @@ int main(int argc, char **argv)
    MPI_Init(&argc,&argv); 
    MPI_Comm_size (MPI_COMM_WORLD, &size); 
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
- 
+   
+   
     for (k = 0; k < V; k++) 
     {
 		MPI_Barrier(MPI_COMM_WORLD);
@@ -68,43 +68,40 @@ int main(int argc, char **argv)
 					// i to j, then update the value of dist[i][j] 
 					if (dist[i][k] + sendbuf[j] < dist[i][j]) 
 						dist[i][j] = dist[i][k] + sendbuf[j]; 
-				}
-				MPI_Gather(dist[i],size,MPI_INT,recbuf,size,MPI_INT,0,MPI_COMM_WORLD);
-				if(rank == 0){
-					int inicio=0;
-					int fim = V;
-					for(int u=0;u<V;u++){
-						if(fim <= size*V){
-							while(inicio<fim){
-								dist[u][inicio] = recbuf[inicio];
-								printf("%d %d %d \n",k,inicio,recbuf[inicio]);
-								inicio++;
-							}
-							fim=inicio+V;
-						}
-					}
-				}
+				} 
 			}
+		}
+    } 
+      
+    // Print the shortest distance matrix
+     MPI_Barrier(MPI_COMM_WORLD);
+     for (int i = 0; i < V; i++){
+		teste = i % size;
+		if(rank == teste){
+			MPI_Gather(dist[i],size,MPI_INT,recbuf,size,MPI_INT,0,MPI_COMM_WORLD);
+		}
+	}
+	if(rank == 0){
+		printf ("Matriz com menores caminhos \n"); 
+		int inicio=0;
+		int fim = V;
+		for(int u=0;u<V;u++){
+			if(fim <= size*V){
+				while(inicio<fim){
+					if(recbuf[inicio] == INF){
+						printf("%7s", "INF");
+					}else{
+						printf("%7d",recbuf[inicio]);
+					}
+					inicio++;
+				}
+				fim=inicio+V;
+			}
+			printf("\n");
 		}
 	}
  
-      
-	MPI_Barrier(MPI_COMM_WORLD);
-    // Print the shortest distance matrix 
-       printf ("Matriz com menores caminhos \n");
-    if(rank == 0){
-    for (int i = 0; i < V; i++) 
-    { 
-        for (int j = 0; j < V; j++) 
-        { 
-            if (dist[i][j] == INF) 
-                printf("%7s", "INF"); 
-            else
-                printf ("%7d", dist[i][j]); 
-        } 
-        printf("\n");
-	} 
-    } 
+   
    MPI_Finalize();  
    return 0; 
  } 
