@@ -3,7 +3,7 @@
 #include <stdio.h> 
 #include "mpi.h"   
 // Number of vertices in the graph 
-#define V 5 
+#define V 4 
   
 /* Define Infinite as a large enough value. This value will be used 
   for vertices not connected to each other */
@@ -26,11 +26,10 @@ void printSolution(int dist[][V])
 int main(int argc, char **argv) 
  {  
 
-    int graph[V][V] = { {0,   5,  INF, 10, 15}, 
-                        {INF, 0,   3, INF, 8}, 
-                        {INF, INF, 0,   1 , INF}, 
-                        {INF, INF, INF, 0, INF},
-                        {INF, INF, INF, INF, 0} 
+    int graph[V][V] = { {0, 5, INF, 10}, 
+						{INF, 0, 3, INF}, 
+						{INF, INF, 0, 1}, 
+						{INF, INF, INF, 0} 
                       }; 
   
     int dist[V][V], i, j, k; 
@@ -39,7 +38,7 @@ int main(int argc, char **argv)
         for (j = 0; j < V; j++) 
             dist[i][j] = graph[i][j]; 
       
-   int size, rank,teste; 
+   int size, rank,teste,sendbuf[V]; 
    MPI_Init(&argc,&argv); 
    MPI_Comm_size (MPI_COMM_WORLD, &size); 
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -47,7 +46,10 @@ int main(int argc, char **argv)
    
     for (k = 0; k < V; k++) 
     {
-		MPI_Barrier(MPI_COMM_WORLD); 
+		MPI_Barrier(MPI_COMM_WORLD);
+		int root = k % size;
+		for(int x = 0; x<V;x++) sendbuf[x] = dist[k][x];
+		MPI_Bcast(sendbuf, 1, MPI_INT, root, MPI_COMM_WORLD);
         // Pick all vertices as source one by one 
         for (i = 0; i < V; i++) 
         {	
@@ -64,17 +66,18 @@ int main(int argc, char **argv)
 				{ 
 					// If vertex k is on the shortest path from 
 					// i to j, then update the value of dist[i][j] 
-					if (dist[i][k] + dist[k][j] < dist[i][j]) 
-						dist[i][j] = dist[i][k] + dist[k][j]; 
+					if (dist[i][k] + sendbuf[j] < dist[i][j]) 
+						dist[i][j] = dist[i][k] + sendbuf[j]; 
 				} 
 			}
 		}
     } 
       
-   printf ("Sou o processo %d de %d\n",rank, size);
-
-    // Print the shortest distance matrix 
+    // Print the shortest distance matrix
+     		MPI_Barrier(MPI_COMM_WORLD);
+if(rank == 0){
        printf ("Matriz com menores caminhos \n"); 
+   }
     for (int i = 0; i < V; i++) 
     { 
 					if(size == 1){
